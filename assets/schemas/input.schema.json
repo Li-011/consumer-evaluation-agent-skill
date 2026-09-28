@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/consumer-evaluation-agent/input.schema.json",
+  "title": "Consumer Evaluation Input",
+  "type": "object",
+  "required": ["product", "campaign", "target_consumer", "poster", "iteration"],
+  "properties": {
+    "product": {
+      "type": "object",
+      "required": ["category", "name", "core_selling_points", "brand_positioning"],
+      "properties": {
+        "category": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "price": {"type": ["string", "null"]},
+        "core_selling_points": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "brand_positioning": {"type": "string", "minLength": 1},
+        "verified_facts": {"type": "array", "items": {"type": "string"}, "default": []},
+        "prohibited_claims": {"type": "array", "items": {"type": "string"}, "default": []}
+      },
+      "additionalProperties": false
+    },
+    "campaign": {
+      "type": "object",
+      "required": ["marketing_goal", "channel", "scenario"],
+      "properties": {
+        "marketing_goal": {"type": "string", "minLength": 1},
+        "channel": {"type": "string", "minLength": 1},
+        "scenario": {"type": "string", "minLength": 1},
+        "theme": {"type": ["string", "null"]},
+        "activity_price": {"type": ["string", "null"]},
+        "activity_time": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "target_consumer": {
+      "type": "object",
+      "required": ["macro_segment", "purchase_motivation"],
+      "properties": {
+        "macro_segment": {"enum": ["小镇青年", "Z世代", "精致妈妈", "新锐白领", "资深中产", "都市银发", "都市蓝领", "小镇中老年"]},
+        "purchase_motivation": {"enum": ["价格价值型", "日常便利型", "专业性能型", "品质安心型", "审美表达型", "场景体验型"]}
+      },
+      "additionalProperties": false
+    },
+    "poster": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "description": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "iteration": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "previous_result": {"type": ["string", "null"]},
+        "baseline_result": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "protected_content": {"type": "array", "items": {"type": "string"}, "default": []}
+  },
+  "additionalProperties": false
+}
+

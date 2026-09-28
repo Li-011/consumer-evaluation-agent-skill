@@ -1,0 +1,39 @@
+{
+  "protocol_version": "1.0.0",
+  "poster_version": "V1",
+  "consumer_profile": {"macro_segment": "新锐白领", "purchase_motivation": "场景体验型"},
+  "blind_observation": {
+    "first_three_elements": ["保温杯主体", "营销主题", "活动价格"],
+    "perceived_product": "NORI 保温杯",
+    "perceived_primary_benefit": "适合秋季随身携带热饮",
+    "perceived_scenario": "城市通勤",
+    "visible_offer": "活动价格可见，时间信息较弱",
+    "initial_action": "愿意进一步了解"
+  },
+  "dimensions": {
+    "attention": {"anchor": 4, "score": 80, "evidence": "保温杯是第一视觉主体", "consumer_impact": "消费者能快速停留并识别商品"},
+    "relevance": {"anchor": 4, "score": 80, "evidence": "通勤线索与秋季氛围可见", "consumer_impact": "目标人群能联想到日常携带"},
+    "clarity": {"anchor": 3, "score": 60, "evidence": "主题可读，但活动时间不够明显", "consumer_impact": "消费者理解商品但不能完整复述促销条件"},
+    "value": {"anchor": 3, "score": 60, "evidence": "600 mL 可见，但随行价值表达一般", "consumer_impact": "消费者知道容量但购买理由仍不充分"},
+    "desire": {"anchor": 3, "score": 60, "evidence": "价格可见但行动提示较弱", "consumer_impact": "愿意了解，但尚未形成明确购买推动"}
+  },
+  "scores": {"attention": 80, "relevance": 80, "clarity": 60, "value": 60, "desire": 60},
+  "CES": 68,
+  "weakest_dimension": "clarity",
+  "failure_codes": ["CLR-03", "VAL-01", "DES-01"],
+  "diagnosis": ["商品与通勤场景成立，但促销条件和随行价值不足以推动行动"],
+  "revision_actions": [
+    {
+      "priority": "P0",
+      "failure_code": "CLR-03",
+      "observation": "活动时间在信息层级中不明显",
+      "consumer_effect": "消费者无法快速确认促销有效期",
+      "action": "将活动时间并入价格信息模块并提高可读性，不改变正式活动内容",
+      "return_step": "information_hierarchy_or_copy",
+      "protected_content": ["NORI Logo", "产品外观", "活动价格"]
+    }
+  ],
+  "delta": null,
+  "decision": "ITERATE"
+}
+

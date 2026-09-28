@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "macro_segments": ["小镇青年", "Z世代", "精致妈妈", "新锐白领", "资深中产", "都市银发", "都市蓝领", "小镇中老年"],
+  "purchase_motivations": ["价格价值型", "日常便利型", "专业性能型", "品质安心型", "审美表达型", "场景体验型"],
+  "rule": "Upstream labels are locked. The evaluation agent must not reclassify them."
+}
+

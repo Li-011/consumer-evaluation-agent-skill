@@ -1,0 +1,6 @@
+{
+  "name": "consumer-evaluation-agent-skill",
+  "owner": {"name": "xyu"},
+  "plugins": [{"name": "consumer-evaluation-agent-skill", "source": "./", "description": "Consumer-facing e-commerce poster evaluation and iteration routing."}]
+}
+

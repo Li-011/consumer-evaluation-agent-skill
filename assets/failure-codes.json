@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "codes": {
+    "ATT-01": {"meaning": "第一视觉焦点不足", "return_step": "product_focus_or_attention"},
+    "ATT-02": {"meaning": "视觉刺激与目标人群不匹配", "return_step": "product_focus_or_attention"},
+    "REL-01": {"meaning": "人群风格错位", "return_step": "audience_scene_or_motivation_match"},
+    "REL-02": {"meaning": "消费场景错位", "return_step": "audience_scene_or_motivation_match"},
+    "REL-03": {"meaning": "购买动机表达错位", "return_step": "audience_scene_or_motivation_match"},
+    "CLR-01": {"meaning": "商品识别不清", "return_step": "information_hierarchy_or_copy"},
+    "CLR-02": {"meaning": "核心卖点不明确", "return_step": "information_hierarchy_or_copy"},
+    "CLR-03": {"meaning": "信息层级混乱", "return_step": "information_hierarchy_or_copy"},
+    "VAL-01": {"meaning": "价值表达不足", "return_step": "value_proposition_or_proof"},
+    "VAL-02": {"meaning": "价格或品质感不匹配", "return_step": "value_proposition_or_proof"},
+    "VAL-03": {"meaning": "缺少价值证明", "return_step": "value_proposition_or_proof"},
+    "DES-01": {"meaning": "缺少行动驱动力", "return_step": "offer_cta_or_purchase_barrier"},
+    "DES-02": {"meaning": "有吸引力但缺少购买理由", "return_step": "offer_cta_or_purchase_barrier"},
+    "DES-03": {"meaning": "消费阻力明显", "return_step": "offer_cta_or_purchase_barrier"}
+  }
+}
+
