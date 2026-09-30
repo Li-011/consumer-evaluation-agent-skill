@@ -1,6 +1,5 @@
 {
-  "name": "consumer-evaluation-agent-skill",
-  "version": "1.0.0",
-  "description": "Evaluate e-commerce posters from a locked target-consumer perspective."
+  "name": "02-consumer-agent-skill",
+  "version": "1.1.0",
+  "description": "Evaluate e-commerce posters with locked P-M-S tags and return the unified A-D JSON."
 }
-

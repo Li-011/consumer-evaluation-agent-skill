@@ -1,44 +1,127 @@
 #!/usr/bin/env python3
-"""Normalize anchor scores, compute CES, validate failure codes, and decide."""
+"""Convert an internal five-dimension draft into the fixed D-to-A JSON."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
-from common import ANCHOR_TO_SCORE, DIMENSIONS, load_json, root_dir, write_json
+from common import DIMENSION_LABELS, DIMENSIONS, load_json, write_json
+
+OUTPUT_KEYS = {
+    "agent_name",
+    "score",
+    "pass",
+    "problem_list",
+    "modify_suggestion",
+    "protected_content",
+    "meta",
+}
+
+
+def _string_list(value: object, field: str, maximum: int | None = None) -> list[str]:
+    if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
+        raise ValueError(f"{field} must be an array of non-empty strings")
+    if maximum is not None and len(value) > maximum:
+        raise ValueError(f"{field} must contain at most {maximum} items")
+    return value
 
 
 def score_result(data: dict) -> dict:
-    dimensions = data.get("dimensions", {})
-    scores: dict[str, int] = {}
+    dimensions = data.get("dimension_scores")
+    if not isinstance(dimensions, dict):
+        raise ValueError("missing dimension_scores")
+    if set(dimensions) != set(DIMENSIONS):
+        raise ValueError("dimension_scores must contain exactly the five fixed dimensions")
+
+    scores: list[int] = []
     for name in DIMENSIONS:
-        item = dimensions.get(name)
-        if not isinstance(item, dict):
-            raise ValueError(f"missing dimensions.{name}")
-        anchor = item.get("anchor")
-        if anchor not in ANCHOR_TO_SCORE:
-            raise ValueError(f"dimensions.{name}.anchor must be 1..5")
-        expected = ANCHOR_TO_SCORE[anchor]
-        if item.get("score") not in (None, expected):
-            raise ValueError(f"dimensions.{name}.score conflicts with anchor")
-        if not item.get("evidence") or not item.get("consumer_impact"):
-            raise ValueError(f"dimensions.{name} needs evidence and consumer_impact")
-        item["score"] = expected
-        scores[name] = expected
+        value = dimensions[name]
+        if isinstance(value, bool) or not isinstance(value, int) or value not in (0, 1, 2):
+            raise ValueError(f"dimension_scores.{name} must be 0, 1, or 2")
+        scores.append(value)
 
-    registered = load_json(root_dir() / "assets" / "failure-codes.json")["codes"]
-    unknown = sorted(set(data.get("failure_codes", [])) - set(registered))
-    if unknown:
-        raise ValueError(f"unknown failure codes: {', '.join(unknown)}")
+    problems = _string_list(data.get("problem_list"), "problem_list", maximum=3)
+    suggestions = _string_list(data.get("modify_suggestion"), "modify_suggestion", maximum=3)
+    if len(problems) != len(suggestions):
+        raise ValueError("problem_list and modify_suggestion must have the same length")
 
-    ces = round(sum(scores.values()) / len(scores), 1)
-    minimum = min(scores.values())
-    data["scores"] = scores
-    data["CES"] = ces
-    data["weakest_dimension"] = min(DIMENSIONS, key=lambda name: scores[name])
-    data["decision"] = "PASS" if ces >= 80 and minimum >= 65 else "ITERATE"
-    return data
+    protected = _string_list(data.get("protected_content"), "protected_content")
+    if len(set(protected)) != len(protected):
+        raise ValueError("protected_content must not contain duplicates")
+
+    critical = _string_list(data.get("critical_issues", []), "critical_issues", maximum=3)
+    if any(item not in problems for item in critical):
+        raise ValueError("every critical issue must also appear in problem_list")
+
+    confidence = data.get("confidence")
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
+        raise ValueError("confidence must be a number from 0 to 1")
+
+    total = sum(scores)
+    return {
+        "agent_name": "consumer_agent",
+        "score": total,
+        "pass": total >= 7 and not critical,
+        "problem_list": problems,
+        "modify_suggestion": suggestions,
+        "protected_content": protected,
+        "meta": {
+            "judge_dimensions": list(DIMENSION_LABELS),
+            "confidence": confidence,
+        },
+    }
+
+
+def error_result(problem: str, suggestion: str) -> dict:
+    return {
+        "agent_name": "consumer_agent",
+        "score": 0,
+        "pass": False,
+        "problem_list": [problem],
+        "modify_suggestion": [suggestion],
+        "protected_content": [],
+        "meta": {"judge_dimensions": [], "confidence": 0},
+    }
+
+
+def validate_output(data: dict) -> list[str]:
+    errors: list[str] = []
+    if set(data) != OUTPUT_KEYS:
+        errors.append("output must contain exactly the seven A-D fields")
+        return errors
+    if data.get("agent_name") != "consumer_agent":
+        errors.append("agent_name must be consumer_agent")
+    score = data.get("score")
+    if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 10:
+        errors.append("score must be an integer from 0 to 10")
+    if not isinstance(data.get("pass"), bool):
+        errors.append("pass must be boolean")
+    try:
+        problems = _string_list(data.get("problem_list"), "problem_list", maximum=3)
+        suggestions = _string_list(data.get("modify_suggestion"), "modify_suggestion", maximum=3)
+        if len(problems) != len(suggestions):
+            errors.append("problem_list and modify_suggestion must have the same length")
+        protected = _string_list(data.get("protected_content"), "protected_content")
+        if len(set(protected)) != len(protected):
+            errors.append("protected_content must not contain duplicates")
+    except ValueError as exc:
+        errors.append(str(exc))
+    meta = data.get("meta")
+    if not isinstance(meta, dict) or set(meta) != {"judge_dimensions", "confidence"}:
+        errors.append("meta must contain exactly judge_dimensions and confidence")
+    else:
+        try:
+            dimensions = _string_list(meta.get("judge_dimensions"), "meta.judge_dimensions")
+            if len(set(dimensions)) != len(dimensions):
+                errors.append("meta.judge_dimensions must not contain duplicates")
+        except ValueError as exc:
+            errors.append(str(exc))
+        confidence = meta.get("confidence")
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
+            errors.append("meta.confidence must be a number from 0 to 1")
+    return errors
 
 
 def main() -> int:
@@ -48,17 +131,18 @@ def main() -> int:
     args = parser.parse_args()
     try:
         result = score_result(load_json(args.input))
+        output_errors = validate_output(result)
+        if output_errors:
+            raise ValueError("; ".join(output_errors))
     except (OSError, ValueError) as exc:
         print(f"INVALID: {exc}", file=sys.stderr)
         return 1
     if args.output:
         write_json(args.output, result)
     else:
-        import json
         print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
-

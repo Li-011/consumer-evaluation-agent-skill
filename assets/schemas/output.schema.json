@@ -1,113 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/consumer-evaluation-agent/output.schema.json",
-  "title": "Consumer Evaluation Output",
+  "$id": "https://example.invalid/02-consumer-agent-skill/output.schema.json",
+  "title": "D-to-A Unified Agent Output",
   "type": "object",
-  "required": ["protocol_version", "poster_version", "consumer_profile", "blind_observation", "dimensions", "scores", "CES", "weakest_dimension", "failure_codes", "diagnosis", "revision_actions", "decision"],
+  "required": ["agent_name", "score", "pass", "problem_list", "modify_suggestion", "protected_content", "meta"],
   "properties": {
-    "protocol_version": {"const": "1.0.0"},
-    "poster_version": {"type": "string"},
-    "consumer_profile": {
+    "agent_name": {"const": "consumer_agent"},
+    "score": {"type": "integer", "minimum": 0, "maximum": 10},
+    "pass": {"type": "boolean"},
+    "problem_list": {"type": "array", "items": {"type": "string", "minLength": 1}, "maxItems": 3},
+    "modify_suggestion": {"type": "array", "items": {"type": "string", "minLength": 1}, "maxItems": 3},
+    "protected_content": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "meta": {
       "type": "object",
-      "required": ["macro_segment", "purchase_motivation"],
+      "required": ["judge_dimensions", "confidence"],
       "properties": {
-        "macro_segment": {"type": "string"},
-        "purchase_motivation": {"type": "string"}
-      },
-      "additionalProperties": false
-    },
-    "blind_observation": {
-      "type": "object",
-      "required": ["first_three_elements", "perceived_product", "perceived_primary_benefit", "perceived_scenario", "visible_offer", "initial_action"],
-      "properties": {
-        "first_three_elements": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
-        "perceived_product": {"type": "string"},
-        "perceived_primary_benefit": {"type": "string"},
-        "perceived_scenario": {"type": "string"},
-        "visible_offer": {"type": "string"},
-        "initial_action": {"type": "string"}
-      },
-      "additionalProperties": false
-    },
-    "dimensions": {
-      "type": "object",
-      "required": ["attention", "relevance", "clarity", "value", "desire"],
-      "additionalProperties": false,
-      "properties": {
-        "attention": {"$ref": "#/$defs/dimension"},
-        "relevance": {"$ref": "#/$defs/dimension"},
-        "clarity": {"$ref": "#/$defs/dimension"},
-        "value": {"$ref": "#/$defs/dimension"},
-        "desire": {"$ref": "#/$defs/dimension"}
-      }
-    },
-    "scores": {"$ref": "#/$defs/scores"},
-    "CES": {"type": "number", "minimum": 0, "maximum": 100},
-    "weakest_dimension": {"enum": ["attention", "relevance", "clarity", "value", "desire"]},
-    "failure_codes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "diagnosis": {"type": "array", "items": {"type": "string"}},
-    "revision_actions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["priority", "failure_code", "observation", "consumer_effect", "action", "return_step", "protected_content"],
-        "properties": {
-          "priority": {"enum": ["P0", "P1", "P2"]},
-          "failure_code": {"type": "string"},
-          "observation": {"type": "string"},
-          "consumer_effect": {"type": "string"},
-          "action": {"type": "string"},
-          "return_step": {"type": "string"},
-          "protected_content": {"type": "array", "items": {"type": "string"}}
-        },
-        "additionalProperties": false
-      }
-    },
-    "delta": {
-      "type": ["object", "null"],
-      "properties": {
-        "CES": {"type": "number"},
-        "dimensions": {"$ref": "#/$defs/signedScores"},
-        "largest_improvement": {"type": ["string", "null"]},
-        "regressions": {"type": "array", "items": {"type": "string"}}
-      },
-      "additionalProperties": false
-    },
-    "decision": {"enum": ["PASS", "ITERATE", "INVALID_INPUT", "REVIEW_REQUIRED"]}
-  },
-  "$defs": {
-    "dimension": {
-      "type": "object",
-      "required": ["anchor", "score", "evidence", "consumer_impact"],
-      "properties": {
-        "anchor": {"type": "integer", "minimum": 1, "maximum": 5},
-        "score": {"enum": [20, 40, 60, 80, 100]},
-        "evidence": {"type": "string"},
-        "consumer_impact": {"type": "string"}
-      },
-      "additionalProperties": false
-    },
-    "scores": {
-      "type": "object",
-      "required": ["attention", "relevance", "clarity", "value", "desire"],
-      "properties": {
-        "attention": {"enum": [20, 40, 60, 80, 100]},
-        "relevance": {"enum": [20, 40, 60, 80, 100]},
-        "clarity": {"enum": [20, 40, 60, 80, 100]},
-        "value": {"enum": [20, 40, 60, 80, 100]},
-        "desire": {"enum": [20, 40, 60, 80, 100]}
-      },
-      "additionalProperties": false
-    },
-    "signedScores": {
-      "type": "object",
-      "required": ["attention", "relevance", "clarity", "value", "desire"],
-      "properties": {
-        "attention": {"type": "number"}, "relevance": {"type": "number"}, "clarity": {"type": "number"}, "value": {"type": "number"}, "desire": {"type": "number"}
+        "judge_dimensions": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
       },
       "additionalProperties": false
     }
   },
   "additionalProperties": false
 }
-

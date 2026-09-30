@@ -1,34 +1,17 @@
 {
-  "product": {
-    "category": "保温杯",
-    "name": "NORI 600 mL 不锈钢保温杯",
-    "price": "由正式资料提供",
-    "core_selling_points": ["600 mL", "不锈钢", "适合秋季通勤与短途出行"],
-    "brand_positioning": "简洁、自然、可靠",
-    "verified_facts": ["容量为 600 mL", "商品为不锈钢保温杯"],
-    "prohibited_claims": ["未提供的保温时长", "未提供的重量", "未提供的防漏等级"]
-  },
-  "campaign": {
-    "marketing_goal": "限时促销",
-    "channel": "电商商品主视觉",
-    "scenario": "秋季通勤与短途出行",
-    "theme": "轻装出行，温度随行",
-    "activity_price": "由正式资料提供",
-    "activity_time": "由正式资料提供"
-  },
-  "target_consumer": {
-    "macro_segment": "新锐白领",
-    "purchase_motivation": "场景体验型"
-  },
-  "poster": {
-    "path": "replace-with-poster-path.png",
-    "description": "4:5 竖版商品促销主视觉"
-  },
-  "iteration": {
-    "version": "V1",
-    "previous_result": null,
-    "baseline_result": null
-  },
-  "protected_content": ["NORI Logo", "产品外观", "600 mL", "活动价格", "活动时间"]
+  "poster_image": "replace-with-current-poster.png",
+  "product_input": {
+    "product_img": "replace-with-original-product.png",
+    "selling_points": [
+      "600 mL容量",
+      "不锈钢材质"
+    ],
+    "price_text": "限时活动价以正式资料为准",
+    "marketing_target": "NORI面向18至35岁消费者，围绕秋季通勤与短途出行开展限时促销；营销主题为“轻装出行，温度随行”",
+    "scene_tags": [
+      "P02 职场通勤人群",
+      "M02 功能效率",
+      "S03 通勤车载"
+    ]
+  }
 }
-

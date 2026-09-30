@@ -1,12 +1,7 @@
 {
-  "dimension_scores": {
-    "product_recognition": 2,
-    "benefit_clarity": 1,
-    "offer_visibility": 2,
-    "population_scene_fit": 1,
-    "purchase_drive": 1
-  },
-  "critical_issues": [],
+  "agent_name": "consumer_agent",
+  "score": 7,
+  "pass": true,
   "problem_list": [
     "海报具有秋季氛围，但没有建立保温杯与通勤携带的实际使用联系",
     "600 mL容量已经出现，但没有转化为容易理解的日常便利利益"
@@ -21,5 +16,14 @@
     "不锈钢材质",
     "正确的价格文案"
   ],
-  "confidence": 0.9
+  "meta": {
+    "judge_dimensions": [
+      "商品与品牌识别",
+      "消费利益与卖点传达",
+      "价格促销与活动信息",
+      "人群与场景适配",
+      "购买信心与行动驱动"
+    ],
+    "confidence": 0.9
+  }
 }

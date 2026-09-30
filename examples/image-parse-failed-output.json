@@ -1,0 +1,12 @@
+{
+  "agent_name": "consumer_agent",
+  "score": 0,
+  "pass": false,
+  "problem_list": ["海报图像解析失败"],
+  "modify_suggestion": ["重新提供可读取的海报图像后再次评估"],
+  "protected_content": [],
+  "meta": {
+    "judge_dimensions": [],
+    "confidence": 0
+  }
+}

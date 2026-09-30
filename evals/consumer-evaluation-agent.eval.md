@@ -1,18 +1,23 @@
-# Consumer Evaluation Agent 1.0 Eval
+# Consumer Agent 1.1 Eval
 
-## Binary checks
+## Interface checks
 
-1. Valid taxonomy labels are accepted and unknown labels are rejected.
-2. A 1–5 anchor is deterministically converted to 20–100.
-3. CES is the equal-weight mean of A–E.
-4. PASS requires CES at least 80 and no dimension below 65.
-5. Unknown Failure Codes are rejected.
-6. Version comparison fails when the locked consumer profile changes.
+1. Input contains only `poster_image` and `product_input` at the top level.
+2. `scene_tags` contains exactly one P, one M, and one S label in that order.
+3. Unknown or misordered frozen tags are rejected.
+4. Output contains exactly the seven A-D fields.
+5. `meta` contains only `judge_dimensions` and `confidence`.
 
-## Golden cases
+## Scoring checks
 
-- `nori-input-valid`: the bundled NORI input validates.
-- `nori-v1-iterate`: scores 80/80/60/60/60 produce CES 68 and ITERATE.
-- `nori-v2-pass`: scores 80/80/80/80/80 produce CES 80 and PASS.
-- `profile-drift-holdout`: changing the profile between versions must fail. Split: test.
+1. Five fixed dimensions accept only integer anchors 0, 1, or 2.
+2. Overall score is their sum and remains an integer from 0 to 10.
+3. Score 7 or above passes only when no critical issue exists.
+4. A critical factual issue blocks pass even when the score is high.
+5. Problems and suggestions are paired by index and limited to three.
 
+## Failure checks
+
+1. Image parse failure returns the same seven-field JSON with score 0.
+2. Missing required input never produces fabricated dimension scores.
+3. Invalid, incorrect, or uncertain content is never included in `protected_content`.

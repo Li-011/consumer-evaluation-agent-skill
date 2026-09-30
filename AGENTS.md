@@ -1,26 +1,25 @@
-# Consumer Evaluation Agent Skill
+# 02消费者Agent-skill
 
-Use this repository when evaluating an e-commerce poster from a locked target-consumer perspective.
+Use this repository to evaluate one e-commerce poster from upstream-locked P population, M purchase-motivation, and S usage-scene tags.
 
-## Activation
+## Contract
 
-Activate for consumer scoring, poster iteration comparison, PASS versus ITERATE decisions, consumer-facing failure diagnosis, or structured revision routing.
+- Accept only the fixed A-to-D input: `poster_image` plus `product_input`.
+- Treat `scene_tags` as exactly `[P population, M motivation, S usage scene]`.
+- Return exactly the seven D-to-A fields defined in `assets/schemas/output.schema.json`.
+- Return JSON only. Errors keep the same structure with score 0.
 
-## Required behavior
+## Evaluation
 
-- Read `SKILL.md` for the full protocol.
-- Preserve the upstream macro segment and purchase motivation.
-- Score Attention, Relevance, Clarity, Value, and Desire with equal weights.
-- Choose a 1–5 rubric anchor before converting to 20/40/60/80/100.
-- Use only registered failure codes.
-- Return schema-valid JSON.
-- Route pure aesthetics to the Aesthetic Agent.
-- Never invent product evidence.
+- Observe the poster before using product facts to fill gaps.
+- Score the five fixed dimensions from 0 to 2 and sum them to 0–10.
+- Pass only at score 7 or above with no critical factual issue.
+- Pair each problem with the suggestion at the same array index; keep at most three.
+- Protect only content verified as correct against the supplied product input.
 
-## Gotchas
+## Boundaries
 
-- The 48 consumer states are contexts, not separate rubrics.
-- Purchase motivation changes the lens, not the weights.
-- PASS requires CES at least 80 and no dimension below 65.
-- Keep taxonomy, rubric, thresholds, and product truth fixed across iterations.
-
+- Never reclassify P-M-S tags.
+- Never invent product claims or campaign requirements.
+- Do not generate posters, control retries, compare versions, call the aesthetic agent, or grade pure aesthetics.
+- A owns compliance, iteration, logging, regeneration, and protected-content merging.

@@ -1,8 +1,0 @@
-{
-  "poster_version": "V1",
-  "consumer_profile": {"macro_segment": "新锐白领", "purchase_motivation": "场景体验型"},
-  "scores": {"attention": 80, "relevance": 80, "clarity": 60, "value": 60, "desire": 60},
-  "CES": 68.0,
-  "decision": "ITERATE"
-}
-

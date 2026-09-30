@@ -1,41 +1,50 @@
-# Main Workflow Integration
+# A-D 主流程接口
 
-## 调用条件
+## 统一输入
 
-只有在硬性合规检查通过后调用消费者 Agent。若商品、Logo、价格、活动时间、文案或格式存在事实错误，先返回生成环节修复。
+消费者 Agent 和美学 Agent 接收相同的两个顶层字段：`poster_image` 与 `product_input`。消费者 Agent 不要求版本、轮次或上一轮结果。
 
-## 锁定字段
-
-首次评价前冻结：
-
-- taxonomy version；
-- macro segment；
-- purchase motivation；
-- product facts；
-- rubric version；
-- pass threshold。
-
-后续版本不得修改这些字段。若业务确实需要改变目标人群，建立新的测试轨道，不与旧版本计算 Delta。
-
-## 路由
+`scene_tags` 固定为三项：
 
 ```text
-合规通过
-→ Consumer Evaluation
-→ PASS: Aesthetic Evaluation
-→ ITERATE: 按 failure code 返回指定设计步骤
-→ 生成新版本
-→ 使用相同锁定上下文再次 Consumer Evaluation
+0: P 人群
+1: M 购买动机
+2: S 使用场景
 ```
 
-## 保护机制
+推荐传入 `ID 名称`。A 在后续迭代中必须重复传入完全相同的 P-M-S 标签；若营销目标改变，应建立新的评估轨道。
 
-每条修改动作必须包含 `protected_content`。下游不得为了修复一个低分维度而改变已经确认的商品外观、Logo、价格、活动时间或已经通过的关键信息。
+## 统一输出
 
-## 日常开发与正式测评
+消费者 Agent 与美学 Agent 使用相同七字段结构。A 只用 `score` 和 `pass` 控制流程；记录 `meta` 但不以它改变路由。
 
-- 日常开发：每个版本运行一次，快速定位 Failure Code。
-- 正式测评：同一输入独立运行三次，保存原始结果，以维度中位数形成正式分数；若同一维度极差超过 40 分，标记 `REVIEW_REQUIRED`。
+`problem_list` 和 `modify_suggestion` 按下标一一对应。A 将对应项组合成给生成模块的修改指令。
 
-模型评分是模拟消费者判断，不是真实用户实验结果。报告中不得将 CES 表述为真实点击率或购买率。
+## 保护内容
 
+A 应维护保护内容累积集合：
+
+```text
+protected_union = unique(
+  consumer_agent.protected_content
+  + aesthetic_agent.protected_content
+)
+```
+
+统一 Agent 输入没有上一 Agent 的保护内容字段，因此不要要求美学 Agent自动继承消费者 Agent 的输出。A 在调用生成模块时传入合并后的列表。
+
+## 流程边界
+
+```text
+硬性合规检查
+→ Consumer Agent
+→ pass=false: A 组织修改并重新生成
+→ pass=true: 进入 Aesthetic Agent
+→ A 合并保护内容并决定后续流程
+```
+
+每次重新生成后，A 重新执行硬性合规检查。消费者 Agent 不生成海报、不控制循环、不保存版本、不比较版本。
+
+## 异常
+
+任何异常仍返回统一 JSON。输入或图片不可评估时使用 `score: 0`、`pass: false`、空保护列表与 `confidence: 0`，不要把技术失败伪装成正常的消费者低分。

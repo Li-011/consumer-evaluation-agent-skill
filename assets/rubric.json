@@ -1,8 +1,13 @@
 {
-  "version": "1.0.0",
-  "dimensions": ["attention", "relevance", "clarity", "value", "desire"],
-  "weights": {"attention": 0.2, "relevance": 0.2, "clarity": 0.2, "value": 0.2, "desire": 0.2},
-  "anchor_to_score": {"1": 20, "2": 40, "3": 60, "4": 80, "5": 100},
-  "pass_rules": {"minimum_ces": 80, "minimum_dimension": 65}
+  "version": "1.1.0",
+  "dimensions": ["product_recognition", "benefit_clarity", "offer_visibility", "population_scene_fit", "purchase_drive"],
+  "dimension_labels": {
+    "product_recognition": "商品与品牌识别",
+    "benefit_clarity": "消费利益与卖点传达",
+    "offer_visibility": "价格促销与活动信息",
+    "population_scene_fit": "人群与场景适配",
+    "purchase_drive": "购买信心与行动驱动"
+  },
+  "anchor_range": [0, 1, 2],
+  "pass_rules": {"minimum_score": 7, "critical_issue_blocks_pass": true}
 }
-
