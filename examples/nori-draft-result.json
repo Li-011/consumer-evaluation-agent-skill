@@ -1,25 +1,112 @@
 {
-  "dimension_scores": {
-    "product_recognition": 2,
-    "benefit_clarity": 1,
-    "offer_visibility": 2,
-    "population_scene_fit": 1,
-    "purchase_drive": 1
-  },
   "critical_issues": [],
   "problem_list": [
-    "海报具有秋季氛围，但没有建立保温杯与通勤携带的实际使用联系",
-    "600 mL容量已经出现，但没有转化为容易理解的日常便利利益"
+    "通勤使用关系表达不足"
   ],
   "modify_suggestion": [
-    "增加手持、包袋或城市移动线索，建立商品与通勤车载场景的使用关系",
-    "保留600 mL信息并补充简短的通勤随身利益表达，不增加未经输入支持的重量或保温时长"
+    "对象：辅助背景；操作：补充城市移动线索；保留商品、Logo和全部营销信息；验收：使用关系明确且商品仍为主体"
   ],
-  "protected_content": [
-    "NORI保温杯商品主体",
-    "600 mL容量",
-    "不锈钢材质",
-    "正确的价格文案"
-  ],
-  "confidence": 0.9
+  "confidence": 0.8,
+  "subcriteria": {
+    "D1_1": {
+      "level": 4,
+      "evidence": "示例占位证据：商品和品牌可识别，正式测评须读图"
+    },
+    "D1_2": {
+      "level": 4,
+      "evidence": "示例占位证据：商品和品牌可识别，正式测评须读图"
+    },
+    "D1_3": {
+      "level": 4,
+      "evidence": "示例占位证据：商品和品牌可识别，正式测评须读图"
+    },
+    "D1_4": {
+      "level": 4,
+      "evidence": "示例占位证据：商品和品牌可识别，正式测评须读图"
+    },
+    "D1_5": {
+      "level": 4,
+      "evidence": "示例占位证据：商品和品牌可识别，正式测评须读图"
+    },
+    "D2_1": {
+      "level": 4,
+      "evidence": "示例占位证据：卖点清楚"
+    },
+    "D2_2": {
+      "level": 4,
+      "evidence": "示例占位证据：卖点清楚"
+    },
+    "D2_3": {
+      "level": 3,
+      "evidence": "示例占位证据：卖点清楚"
+    },
+    "D2_4": {
+      "level": 3,
+      "evidence": "示例占位证据：卖点清楚"
+    },
+    "D2_5": {
+      "level": 3,
+      "evidence": "示例占位证据：卖点清楚"
+    },
+    "D3_1": {
+      "level": 4,
+      "evidence": "示例占位证据：价格日期清楚"
+    },
+    "D3_2": {
+      "level": 4,
+      "evidence": "示例占位证据：价格日期清楚"
+    },
+    "D3_3": {
+      "level": 3,
+      "evidence": "示例占位证据：价格日期清楚"
+    },
+    "D3_4": {
+      "level": 4,
+      "evidence": "示例占位证据：价格日期清楚"
+    },
+    "D3_5": {
+      "level": 4,
+      "evidence": "示例占位证据：价格日期清楚"
+    },
+    "D4_1": {
+      "level": 3,
+      "evidence": "示例占位证据：城市移动使用关系弱"
+    },
+    "D4_2": {
+      "level": 4,
+      "evidence": "示例占位证据：城市移动使用关系弱"
+    },
+    "D4_3": {
+      "level": 1,
+      "evidence": "示例占位证据：城市移动使用关系弱"
+    },
+    "D4_4": {
+      "level": 2,
+      "evidence": "示例占位证据：城市移动使用关系弱"
+    },
+    "D4_5": {
+      "level": 2,
+      "evidence": "示例占位证据：城市移动使用关系弱"
+    },
+    "D5_1": {
+      "level": 4,
+      "evidence": "示例占位证据：CTA可识别"
+    },
+    "D5_2": {
+      "level": 3,
+      "evidence": "示例占位证据：CTA可识别"
+    },
+    "D5_3": {
+      "level": 3,
+      "evidence": "示例占位证据：CTA可识别"
+    },
+    "D5_4": {
+      "level": 3,
+      "evidence": "示例占位证据：CTA可识别"
+    },
+    "D5_5": {
+      "level": 3,
+      "evidence": "示例占位证据：CTA可识别"
+    }
+  }
 }

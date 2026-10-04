@@ -1,85 +1,88 @@
-#!/usr/bin/env python3
-"""Dependency-free regression checks for the A-D Consumer Agent contract."""
-
-from __future__ import annotations
-
-import copy
-import sys
-
-from common import DIMENSION_LABELS, load_json, root_dir
-from score_evaluation import OUTPUT_KEYS, error_result, score_result, validate_output
+"""Behavioral interface tests; no claim of model/visual evaluation."""
+from copy import deepcopy
+from common import load_json, root_dir, DIMENSIONS
+from assemble_input import assemble
 from validate_input import validate
+from score_evaluation import score_result, validate_output, error_result
 
-
-def check(condition: bool, message: str) -> None:
-    if not condition:
-        raise AssertionError(message)
-
-
-def expect_value_error(function, message: str) -> None:
-    try:
-        function()
-    except ValueError:
-        return
-    raise AssertionError(message)
-
-
-def main() -> int:
-    root = root_dir()
-    input_data = load_json(root / "examples" / "nori-input.json")
-    check(validate(input_data) == [], "NORI A-D input should validate")
-
-    wrong_order = copy.deepcopy(input_data)
-    wrong_order["product_input"]["scene_tags"] = ["M02 功能效率", "P02 职场通勤人群", "S03 通勤车载"]
-    check(validate(wrong_order), "misordered P-M-S tags must be rejected")
-
-    unknown_tag = copy.deepcopy(input_data)
-    unknown_tag["product_input"]["scene_tags"][2] = "S99 未知场景"
-    check(validate(unknown_tag), "unknown scene tag must be rejected")
-
-    draft = load_json(root / "examples" / "nori-draft-result.json")
-    result = score_result(copy.deepcopy(draft))
-    check(result["score"] == 7, "NORI score must equal 7")
-    check(result["pass"] is True, "score 7 without critical issue must pass")
-    check(set(result) == OUTPUT_KEYS, "output must contain exactly seven fields")
-    check(result["meta"]["judge_dimensions"] == list(DIMENSION_LABELS), "judge dimensions must be fixed")
-    check(validate_output(result) == [], "scored output should validate")
-
-    blocked = copy.deepcopy(draft)
-    blocked["dimension_scores"] = {
-        "product_recognition": 2,
-        "benefit_clarity": 2,
-        "offer_visibility": 2,
-        "population_scene_fit": 1,
-        "purchase_drive": 1,
-    }
-    blocked_problem = "价格文案与输入不一致"
-    blocked["problem_list"] = [blocked_problem]
-    blocked["modify_suggestion"] = ["恢复product_input.price_text中的准确价格文案"]
-    blocked["critical_issues"] = [blocked_problem]
-    blocked_result = score_result(blocked)
-    check(blocked_result["score"] == 8, "blocked result score must equal 8")
-    check(blocked_result["pass"] is False, "critical issue must block pass")
-
-    mismatch = copy.deepcopy(draft)
-    mismatch["modify_suggestion"] = []
-    expect_value_error(lambda: score_result(mismatch), "unpaired problems and suggestions must fail")
-
-    parse_error = error_result("海报图像解析失败", "重新提供可读取的海报图像后再次评估")
-    check(parse_error["score"] == 0 and parse_error["pass"] is False, "parse failure must be score 0 and fail")
-    check(validate_output(parse_error) == [], "parse failure must retain the unified output shape")
-
-    bad_meta = copy.deepcopy(result)
-    bad_meta["meta"]["confidence"] = 2
-    check(validate_output(bad_meta), "out-of-range confidence must be rejected")
-
-    print("PASS: 8 A-D contract checks")
-    return 0
-
-
-if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except (AssertionError, KeyError, TypeError, ValueError) as exc:
-        print(f"FAIL: {exc}", file=sys.stderr)
-        sys.exit(1)
+root=root_dir()
+c=load_json(root/"examples/a-to-d-input.json")
+rubric=load_json(root/"assets/rubric.json")
+d={"subcriteria":{row[0]:{"level":4,"evidence":"接口测试证据，不是实际图像评价"} for rows in rubric["subcriteria"].values() for row in rows},"critical_issues":[],"problem_list":[],"modify_suggestion":[],"confidence":0.9}
+checks=0
+def check(condition):
+    global checks
+    assert condition
+    checks+=1
+check(not validate(c))
+r=score_result(d,c)
+check(r["pass"] and r["score"]==100 and not validate_output(r))
+check(r["protected_content"]==c["protected_content"])
+n=deepcopy(c)
+n["style_guide"]["tags"]["audience_id"]=None;n["evaluation_context"]["scene_tags"][0]="null"
+check(not validate(n) and score_result(d,n)["meta"]["unknown_dimensions"]==["population_scene_fit"])
+bad=deepcopy(c);del bad["source_input"]["commerce"]["promotion_period"]
+e=score_result(d,bad)
+check(e["score"] is None and e["next_route"]=="complete_input" and not validate_output(e))
+check(e["protected_content"]==c["protected_content"])
+second=assemble(c["source_input"],c["style_guide"],c["protected_content"],"poster-v02.png","v02",2,r)
+check(not validate(second) and second["loop_state"]["locked_dimensions"]==r["locked_dimensions"])
+reg=deepcopy(d)
+for row in rubric["subcriteria"]["offer_visibility"]: reg["subcriteria"][row[0]]["level"]=2
+reg["problem_list"]=["价格可见度回退"];reg["modify_suggestion"]=["价格区；增大字号；保留原价；验收：可清晰发现"]
+rr=score_result(reg,second)
+check(not rr["pass"] and rr["regressed_dimensions"]==["offer_visibility"] and rr["next_route"]=="poster_generation_skill")
+check(rr["locked_dimensions"]==r["locked_dimensions"])
+unread=deepcopy(d);unread["image_error"]="图像不可读取"
+ue=score_result(unread,second)
+check(ue["locked_dimensions"]==r["locked_dimensions"] and ue["protected_content"]==r["protected_content"] and not validate_output(ue))
+changed=deepcopy(second);changed["source_input"]["marketing"]["goal"]="更换目标"
+check(bool(validate(changed)))
+altered=deepcopy(d);altered["protected_content"]=[]
+try: score_result(altered,c)
+except ValueError: check(True)
+else: raise AssertionError("D altered protection accepted")
+hard=deepcopy(d)
+hard["critical_issues"]=["价格冲突"];hard["problem_list"]=["价格冲突"];hard["modify_suggestion"]=["恢复原始价格"]
+check(score_result(hard,c)["hard_fail"] and not score_result(hard,c)["pass"])
+square=deepcopy(c["source_input"]);square["canvas"]["width"]=900;square["canvas"]["height"]=900
+sq=assemble(square,c["style_guide"],c["protected_content"],"square.png")
+check(sq["evaluation_context"]["aspect_ratio"]=="1:1" and sq["evaluation_context"]["orientation"]=="square")
+check(c["evaluation_context"]["aspect_ratio"]=="3:4")
+multi=deepcopy(c["source_input"]);multi["product"]["image_refs"].append("second-product.png")
+mc=assemble(multi,c["style_guide"],c["protected_content"],"multi.png")
+check(len(mc["source_input"]["product"]["image_refs"])==2 and mc["evaluation_context"]["product_img"]==multi["product"]["image_refs"][0])
+check(mc["source_input"]["brand"]["logo_ref"]=="")
+quantity=deepcopy(c);quantity["protected_content"]["product_quantity"]=2
+check(bool(validate(quantity)))
+cross=deepcopy(second);cross["loop_state"]["previous_result"]["request_id"]="OTHER"
+check(bool(validate(cross)))
+from subcriteria import calculate
+def rejected(draft):
+    try: score_result(draft,c)
+    except ValueError: return True
+    return False
+missing=deepcopy(d);del missing["subcriteria"]["D1_1"];check(rejected(missing))
+extra=deepcopy(d);extra["subcriteria"]["D9_1"]={"level":4,"evidence":"多余"};check(rejected(extra))
+for value in (True,1.5,5,-1):
+    bad=deepcopy(d);bad["subcriteria"]["D1_1"]["level"]=value;check(rejected(bad))
+empty=deepcopy(d);empty["subcriteria"]["D1_1"]["evidence"]=" ";check(rejected(empty))
+direct=deepcopy(d);direct["dimension_scores"]=dict.fromkeys(DIMENSIONS,20);check(rejected(direct))
+na=deepcopy(d);na["subcriteria"]["D3_1"]={"level":None,"evidence":"无价格","not_applicable_reason":"任务不要求"};check(rejected(na))
+half=deepcopy(d);half["subcriteria"]["D1_1"]["level"]=2
+check(calculate(half,c)[0]["product_recognition"]==18)
+anchors=[[4,4,4,4,4],[4,4,3,3,3],[4,4,3,4,4],[3,4,2,3,3],[4,3,3,2,3]]
+nori=deepcopy(d)
+for rows,levels in zip(rubric["subcriteria"].values(),anchors):
+    for row,level in zip(rows,levels): nori["subcriteria"][row[0]]["level"]=level
+check(calculate(nori,c)[0]==dict(zip(DIMENSIONS,[20,17,19,15,15])))
+check(calculate(nori,c)[2]["score"]==86)
+fact=deepcopy(d);fact["subcriteria"]["D3_1"]["level"]=0;check(rejected(fact))
+nonpromo=deepcopy(c)
+nonpromo["source_input"]["commerce"]["price_text"]=""
+nonpromo["protected_content"]["price_and_unit"]=[]
+nonpromo["evaluation_context"]["required_information"]=[]
+nd=deepcopy(d)
+for key in ("D3_1","D3_2"): nd["subcriteria"][key]={"level":None,"evidence":"无价格要求","not_applicable_reason":"非价格展示任务"}
+check(score_result(nd,nonpromo)["dimension_scores"]["offer_visibility"]==20)
+print("PASS:",checks,"A-D and subcriteria assertions; visual loop not exercised")

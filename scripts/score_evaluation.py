@@ -1,148 +1,73 @@
-#!/usr/bin/env python3
-"""Convert an internal five-dimension draft into the fixed D-to-A JSON."""
+"""Deterministic scoring; output protects A's eight-group object unchanged."""
+import argparse, json
+from copy import deepcopy
+from common import DIMENSIONS, DIMENSION_LABELS, load_json, root_dir, write_json
+from schema_check import check
+from validate_input import validate, context_hash
+from subcriteria import calculate
 
-from __future__ import annotations
+def error_result(errors, context):
+    # Preserve recoverable state even on unreadable poster or incomplete input.
+    safe=context if isinstance(context,dict) else {}
+    pc=safe.get("protected_content")
+    schema=load_json(root_dir()/"assets/schemas/output.schema.json")["properties"]["protected_content"]
+    if check(pc,schema): pc=None
+    old=safe.get("loop_state",{}).get("locked_dimensions",[])
+    old=[d for d in old if d in DIMENSIONS] if isinstance(old,list) else []
+    return {"schema_version":"A-D-2.0","request_id":str(safe.get("request_id","")),"version_id":str(safe.get("loop_state",{}).get("version_id","")),
+            "agent_name":"consumer_agent","score":None,"pass":False,"dimension_scores":None,
+            "problem_list":["输入或图像无法完成评价"],"modify_suggestion":["补充meta.input_errors列出的信息；保留原始保护对象与累计锁"],
+            "protected_content":deepcopy(pc),"locked_dimensions":list(dict.fromkeys(old)),"regressed_dimensions":[],
+            "hard_fail":False,"next_route":"complete_input",
+            "meta":{"judge_dimensions":[],"confidence":0,"input_errors":errors,"unknown_dimensions":[],"context_hash":"","dimension_evidence":{}}}
 
-import argparse
-import json
-import sys
+def score_result(draft, context):
+    errors=validate(context)
+    if errors: return error_result(errors,context)
+    if draft.get("input_errors"): return error_result(draft["input_errors"],context)
+    if draft.get("image_error"): return error_result([draft["image_error"]],context)
+    scores,evidence,_=calculate(draft,context)
+    if set(scores)!=set(DIMENSIONS) or any(type(v) is not int or not 0<=v<=20 for v in scores.values()):
+        raise ValueError("five integer dimension scores 0–20 required")
+    if set(evidence)!=set(DIMENSIONS) or any(not isinstance(v,str) or not v.strip() for v in evidence.values()):
+        raise ValueError("visible evidence required for every dimension")
+    problems=draft["problem_list"]; suggestions=draft["modify_suggestion"]
+    if not isinstance(problems,list) or not isinstance(suggestions,list) or len(problems)!=len(suggestions) or len(problems)>3:
+        raise ValueError("paired string feedback, maximum 3")
+    if any(not isinstance(x,str) or not x.strip() for x in problems+suggestions): raise ValueError("feedback must be nonempty strings")
+    critical=draft.get("critical_issues",[])
+    if not set(critical).issubset(problems): raise ValueError("critical issues must appear in problems")
+    old=context["loop_state"]["locked_dimensions"]
+    regressions=[d for d in old if scores[d]<14]
+    total=sum(scores.values()); passed=total>=80 and min(scores.values())>=14 and not critical and not regressions
+    if not passed and not problems: raise ValueError("failed evaluation needs actionable feedback")
+    locks=list(dict.fromkeys(old+([] if critical else [d for d in DIMENSIONS if scores[d]>=14])))
+    unknown=[d for d in DIMENSIONS if d=="population_scene_fit" and "null" in context["evaluation_context"]["scene_tags"]]
+    confidence=draft["confidence"]
+    if type(confidence) not in (int,float) or not 0<=confidence<=1: raise ValueError("confidence 0–1 required")
+    if "protected_content" in draft and draft["protected_content"]!=context["protected_content"]:
+        raise ValueError("D must not edit A protected_content")
+    result={"schema_version":"A-D-2.0","request_id":context["request_id"],"version_id":context["loop_state"]["version_id"],
+            "agent_name":"consumer_agent","score":total,"pass":bool(passed),"dimension_scores":scores,"problem_list":problems,
+            "modify_suggestion":suggestions,"protected_content":deepcopy(context["protected_content"]),
+            "locked_dimensions":locks,"regressed_dimensions":regressions,"hard_fail":bool(critical),
+            "next_route":"aesthetic_agent" if passed else "poster_generation_skill",
+            "meta":{"judge_dimensions":list(DIMENSION_LABELS),"confidence":confidence,"input_errors":[],
+                    "unknown_dimensions":unknown,"context_hash":context_hash(context),"dimension_evidence":evidence}}
+    errors=validate_output(result)
+    if errors: raise ValueError(errors)
+    return result
 
-from common import DIMENSION_LABELS, DIMENSIONS, load_json, write_json
+def validate_output(result):
+    return check(result,load_json(root_dir()/"assets/schemas/output.schema.json"))
 
-OUTPUT_KEYS = {
-    "agent_name",
-    "score",
-    "pass",
-    "problem_list",
-    "modify_suggestion",
-    "protected_content",
-    "meta",
-}
-
-
-def _string_list(value: object, field: str, maximum: int | None = None) -> list[str]:
-    if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
-        raise ValueError(f"{field} must be an array of non-empty strings")
-    if maximum is not None and len(value) > maximum:
-        raise ValueError(f"{field} must contain at most {maximum} items")
-    return value
-
-
-def score_result(data: dict) -> dict:
-    dimensions = data.get("dimension_scores")
-    if not isinstance(dimensions, dict):
-        raise ValueError("missing dimension_scores")
-    if set(dimensions) != set(DIMENSIONS):
-        raise ValueError("dimension_scores must contain exactly the five fixed dimensions")
-
-    scores: list[int] = []
-    for name in DIMENSIONS:
-        value = dimensions[name]
-        if isinstance(value, bool) or not isinstance(value, int) or value not in (0, 1, 2):
-            raise ValueError(f"dimension_scores.{name} must be 0, 1, or 2")
-        scores.append(value)
-
-    problems = _string_list(data.get("problem_list"), "problem_list", maximum=3)
-    suggestions = _string_list(data.get("modify_suggestion"), "modify_suggestion", maximum=3)
-    if len(problems) != len(suggestions):
-        raise ValueError("problem_list and modify_suggestion must have the same length")
-
-    protected = _string_list(data.get("protected_content"), "protected_content")
-    if len(set(protected)) != len(protected):
-        raise ValueError("protected_content must not contain duplicates")
-
-    critical = _string_list(data.get("critical_issues", []), "critical_issues", maximum=3)
-    if any(item not in problems for item in critical):
-        raise ValueError("every critical issue must also appear in problem_list")
-
-    confidence = data.get("confidence")
-    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
-        raise ValueError("confidence must be a number from 0 to 1")
-
-    total = sum(scores)
-    return {
-        "agent_name": "consumer_agent",
-        "score": total,
-        "pass": total >= 7 and not critical,
-        "problem_list": problems,
-        "modify_suggestion": suggestions,
-        "protected_content": protected,
-        "meta": {
-            "judge_dimensions": list(DIMENSION_LABELS),
-            "confidence": confidence,
-        },
-    }
-
-
-def error_result(problem: str, suggestion: str) -> dict:
-    return {
-        "agent_name": "consumer_agent",
-        "score": 0,
-        "pass": False,
-        "problem_list": [problem],
-        "modify_suggestion": [suggestion],
-        "protected_content": [],
-        "meta": {"judge_dimensions": [], "confidence": 0},
-    }
-
-
-def validate_output(data: dict) -> list[str]:
-    errors: list[str] = []
-    if set(data) != OUTPUT_KEYS:
-        errors.append("output must contain exactly the seven A-D fields")
-        return errors
-    if data.get("agent_name") != "consumer_agent":
-        errors.append("agent_name must be consumer_agent")
-    score = data.get("score")
-    if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 10:
-        errors.append("score must be an integer from 0 to 10")
-    if not isinstance(data.get("pass"), bool):
-        errors.append("pass must be boolean")
-    try:
-        problems = _string_list(data.get("problem_list"), "problem_list", maximum=3)
-        suggestions = _string_list(data.get("modify_suggestion"), "modify_suggestion", maximum=3)
-        if len(problems) != len(suggestions):
-            errors.append("problem_list and modify_suggestion must have the same length")
-        protected = _string_list(data.get("protected_content"), "protected_content")
-        if len(set(protected)) != len(protected):
-            errors.append("protected_content must not contain duplicates")
-    except ValueError as exc:
-        errors.append(str(exc))
-    meta = data.get("meta")
-    if not isinstance(meta, dict) or set(meta) != {"judge_dimensions", "confidence"}:
-        errors.append("meta must contain exactly judge_dimensions and confidence")
-    else:
-        try:
-            dimensions = _string_list(meta.get("judge_dimensions"), "meta.judge_dimensions")
-            if len(set(dimensions)) != len(dimensions):
-                errors.append("meta.judge_dimensions must not contain duplicates")
-        except ValueError as exc:
-            errors.append(str(exc))
-        confidence = meta.get("confidence")
-        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
-            errors.append("meta.confidence must be a number from 0 to 1")
-    return errors
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input")
-    parser.add_argument("--output")
-    args = parser.parse_args()
-    try:
-        result = score_result(load_json(args.input))
-        output_errors = validate_output(result)
-        if output_errors:
-            raise ValueError("; ".join(output_errors))
-    except (OSError, ValueError) as exc:
-        print(f"INVALID: {exc}", file=sys.stderr)
-        return 1
-    if args.output:
-        write_json(args.output, result)
-    else:
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__=="__main__":
+    p=argparse.ArgumentParser();p.add_argument("input");p.add_argument("--context",required=True);p.add_argument("--output");p.add_argument("--details-output");a=p.parse_args()
+    draft=load_json(a.input); context=load_json(a.context)
+    result=score_result(draft,context)
+    if a.details_output:
+        details=calculate(draft,context)[2] if result["score"] is not None else {"score":None,"input_errors":result["meta"]["input_errors"]}
+        details.update(request_id=result["request_id"],version_id=result["version_id"],context_hash=result["meta"]["context_hash"])
+        write_json(a.details_output,details)
+    if a.output: write_json(a.output,result)
+    else: print(json.dumps(result,ensure_ascii=False,indent=2))

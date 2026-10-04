@@ -1,25 +1,3 @@
 # 02消费者Agent-skill
+读取SKILL.md执行A-D-2.0消费者评价。完整Brief从source_input读取；P-M-S继承style_guide，允许null。八组protected_content必须原样收发。五维各20分，总分100；通过要求>=80且每维>=14，无hard_fail和锁定回退。A管理循环和Agent开关，D只返回一次JSON。以assets/schemas和references/integration.md为合同，不使用旧七字段/0–10评分。
 
-Use this repository to evaluate one e-commerce poster from upstream-locked P population, M purchase-motivation, and S usage-scene tags.
-
-## Contract
-
-- Accept only the fixed A-to-D input: `poster_image` plus `product_input`.
-- Treat `scene_tags` as exactly `[P population, M motivation, S usage scene]`.
-- Return exactly the seven D-to-A fields defined in `assets/schemas/output.schema.json`.
-- Return JSON only. Errors keep the same structure with score 0.
-
-## Evaluation
-
-- Observe the poster before using product facts to fill gaps.
-- Score the five fixed dimensions from 0 to 2 and sum them to 0–10.
-- Pass only at score 7 or above with no critical factual issue.
-- Pair each problem with the suggestion at the same array index; keep at most three.
-- Protect only content verified as correct against the supplied product input.
-
-## Boundaries
-
-- Never reclassify P-M-S tags.
-- Never invent product claims or campaign requirements.
-- Do not generate posters, control retries, compare versions, call the aesthetic agent, or grade pure aesthetics.
-- A owns compliance, iteration, logging, regeneration, and protected-content merging.

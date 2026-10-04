@@ -1,99 +1,56 @@
-#!/usr/bin/env python3
-"""Validate the fixed A-to-D input contract and locked P-M-S tags."""
-
-from __future__ import annotations
-
-import argparse
-import sys
-
+"""Schema and semantic checks for A-D-2.0. Null tags are supported."""
+import argparse, re, hashlib, json
 from common import load_json, root_dir
+from schema_check import check
 
-TOP_LEVEL_KEYS = {"poster_image", "product_input"}
-PRODUCT_KEYS = {"product_img", "selling_points", "price_text", "marketing_target", "scene_tags"}
-TAXONOMY_GROUPS = ("populations", "motivations", "usage_scenes")
+def context_hash(data):
+    # Poster/version/loop excluded. Brief, C selection and immutable facts stay fixed.
+    stable={k:data[k] for k in ("source_input","style_guide","protected_content","evaluation_context")}
+    return hashlib.sha256(json.dumps(stable,ensure_ascii=False,sort_keys=True,separators=(",",":")).encode()).hexdigest()
 
-
-def _matches_tag(value: str, item: dict) -> bool:
-    normalized = " ".join(value.split())
-    return normalized in {item["id"], item["name"], f'{item["id"]} {item["name"]}'}
-
-
-def validate(data: object) -> list[str]:
-    errors: list[str] = []
-    if not isinstance(data, dict):
-        return ["input must be an object"]
-
-    missing = sorted(TOP_LEVEL_KEYS - set(data))
-    extra = sorted(set(data) - TOP_LEVEL_KEYS)
-    errors.extend(f"missing required field: {key}" for key in missing)
-    errors.extend(f"unexpected top-level field: {key}" for key in extra)
-    if missing:
-        return errors
-
-    if not isinstance(data.get("poster_image"), str) or not data["poster_image"].strip():
-        errors.append("poster_image must be a non-empty string")
-
-    product = data.get("product_input")
-    if not isinstance(product, dict):
-        errors.append("product_input must be an object")
-        return errors
-
-    missing_product = sorted(PRODUCT_KEYS - set(product))
-    extra_product = sorted(set(product) - PRODUCT_KEYS)
-    errors.extend(f"missing required field: product_input.{key}" for key in missing_product)
-    errors.extend(f"unexpected product_input field: {key}" for key in extra_product)
-    if missing_product:
-        return errors
-
-    if not isinstance(product.get("product_img"), str) or not product["product_img"].strip():
-        errors.append("product_input.product_img must be a non-empty string")
-
-    selling_points = product.get("selling_points")
-    if not isinstance(selling_points, list) or not selling_points:
-        errors.append("product_input.selling_points must be a non-empty array")
-    elif any(not isinstance(item, str) or not item.strip() for item in selling_points):
-        errors.append("product_input.selling_points must contain non-empty strings")
-    elif len(set(selling_points)) != len(selling_points):
-        errors.append("product_input.selling_points must not contain duplicates")
-
-    if not isinstance(product.get("price_text"), str):
-        errors.append("product_input.price_text must be a string")
-    if not isinstance(product.get("marketing_target"), str) or not product["marketing_target"].strip():
-        errors.append("product_input.marketing_target must be a non-empty string")
-
-    tags = product.get("scene_tags")
-    if not isinstance(tags, list) or len(tags) != 3:
-        errors.append("product_input.scene_tags must contain exactly three items in P-M-S order")
-        return errors
-    if any(not isinstance(tag, str) or not tag.strip() for tag in tags):
-        errors.append("product_input.scene_tags must contain non-empty strings")
-        return errors
-
-    taxonomy = load_json(root_dir() / "assets" / "taxonomy.json")
-    for index, group in enumerate(TAXONOMY_GROUPS):
-        if not any(_matches_tag(tags[index], item) for item in taxonomy[group]):
-            expected = ("P population", "M motivation", "S usage scene")[index]
-            errors.append(f"scene_tags[{index}] is not a known {expected} tag")
+def validate(data):
+    errors=check(data,load_json(root_dir()/"assets/schemas/input.schema.json"))
+    if errors: return errors
+    s=data["source_input"]; e=data["evaluation_context"]; pc=data["protected_content"]
+    if data["request_id"]!=s["request_id"]: errors.append("request_id must match source_input")
+    if not (s["product"]["name"].strip() or s["product"]["category"].strip()): errors.append("product name or category required")
+    if e["product_img"]!=s["product"]["image_refs"][0]: errors.append("product_img must match first image_ref")
+    from math import gcd
+    w,h=s["canvas"]["width"],s["canvas"]["height"]; g=gcd(w,h)
+    if e["aspect_ratio"]!=str(w//g)+":"+str(h//g): errors.append("aspect_ratio conflicts with canvas")
+    if e["orientation"]!=("vertical" if h>w else "horizontal" if w>h else "square"): errors.append("orientation conflicts with canvas")
+    taxonomy=load_json(root_dir()/"assets/taxonomy.json")
+    for i,(group,key) in enumerate(zip(("populations","motivations","usage_scenes"),("audience_id","motivation_id","scenario_id"))):
+        tag=" ".join(re.sub(r"[｜|:：]+"," ",e["scene_tags"][i]).split())
+        upstream=data["style_guide"]["tags"][key]
+        if upstream is None:
+            if tag!="null": errors.append("null upstream tag must remain null")
+            continue
+        items=taxonomy[group]
+        selected=next((x for x in items if tag in (x["id"],x["name"],x["id"]+" "+x["name"])),None)
+        if selected is None or selected["id"]!=upstream: errors.append("scene_tags conflicts with upstream "+key)
+    # Protect original confirmed values; do not flatten the returned object.
+    checks={"product_identity":[s["product"]["name"] or s["product"]["category"]],
+            "selling_points":s["product"]["selling_points"],"brand_and_logo":[s["brand"]["name"]],
+            "price_and_unit":[s["commerce"]["price_text"]],
+            "promotion_and_period":[s["commerce"]["promotion_text"],s["commerce"]["promotion_period"]],
+            "cta":[s["marketing"]["cta"]],"legal_text":[s["commerce"]["legal_text"]]}
+    for group,values in checks.items():
+        for value in values:
+            if value and value not in pc[group]: errors.append("protected_content."+group+" missing original value")
+    if pc["product_quantity"]!=s["product"]["quantity"]: errors.append("protected quantity differs")
+    previous=data["loop_state"]["previous_result"]
+    if previous:
+        if previous.get("request_id")!=data["request_id"]: errors.append("previous result belongs to another request")
+        if previous.get("protected_content")!=pc: errors.append("protected_content changed across iterations")
+        if not set(previous.get("locked_dimensions",[])).issubset(data["loop_state"]["locked_dimensions"]):
+            errors.append("previous locks must be inherited")
+        if previous.get("meta",{}).get("context_hash")!=context_hash(data):
+            errors.append("locked brief/C context changed; start a new evaluation track")
     return errors
 
+if __name__=="__main__":
+    p=argparse.ArgumentParser();p.add_argument("input");a=p.parse_args()
+    errors=validate(load_json(a.input));print("\\n".join(errors) if errors else "VALID")
+    raise SystemExit(bool(errors))
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input")
-    args = parser.parse_args()
-    try:
-        errors = validate(load_json(args.input))
-    except (OSError, ValueError) as exc:
-        print(f"INVALID: {exc}")
-        return 1
-    if errors:
-        print("INVALID")
-        for error in errors:
-            print(f"- {error}")
-        return 1
-    print("VALID")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
