@@ -1,9 +1,11 @@
 ---
 name: 02-consumer-agent-skill
 description: Evaluate e-commerce posters using A-group complete briefs and C-group locked P-M-S tags. Return 0–100 scores, actionable feedback, unchanged eight-group protected content and regression locks.
+license: MIT
 metadata:
+  author: xyu
   version: 1.5.0
-  last_reviewed: 2026-10-04
+  last_reviewed: 2026-10-05
 ---
 # 消费者 Agent：A-D-2.0 接口
 只评价一次并输出纯JSON。A管理生成、硬合规、日志、重试和Agent开关；C提供分类资产及规则。读取references/integration.md了解组装和路由；读取assets/schemas/input.schema.json、output.schema.json了解正式合同。
