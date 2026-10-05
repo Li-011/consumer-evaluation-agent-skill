@@ -18,6 +18,16 @@ check(not validate(c))
 r=score_result(d,c)
 check(r["pass"] and r["score"]==100 and not validate_output(r))
 check(r["protected_content"]==c["protected_content"])
+# Provenance reminders alone do not invalidate complete evaluation content.
+pending=deepcopy(c)
+pending["source_input"]["original_brief"]={"handoff_provenance":{"protected_content_status":"按旧输入和PDF重建，生产联调前待A确认"}}
+pending["style_guide"]["needs_human_review"]=True
+check(not validate(pending))
+pr=score_result(d,pending)
+check(pr["score"]==100 and pr["meta"]["input_errors"]==[] and pr["protected_content"]==pending["protected_content"])
+conflict=deepcopy(pending)
+conflict["protected_content"]["price_and_unit"]=["错误价格"]
+check(score_result(d,conflict)["next_route"]=="complete_input")
 n=deepcopy(c)
 n["style_guide"]["tags"]["audience_id"]=None;n["evaluation_context"]["scene_tags"][0]="null"
 check(not validate(n) and score_result(d,n)["meta"]["unknown_dimensions"]==["population_scene_fit"])

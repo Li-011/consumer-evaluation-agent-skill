@@ -1,5 +1,5 @@
 # 五维百分制
-v1.5.0：模型按assets/rubric.json的25项编号提供档位和证据；读取subcriteria-anchors.md逐项判断。scripts/subcriteria.py自动计算，不接受模型直接填写五维分数。--details-output保存内部评分明细，正式A-D输出不变。
+v1.5.3：模型按assets/rubric.json的25项编号提供档位和证据；读取subcriteria-anchors.md与candidate-boundaries.md逐项判断。scripts/subcriteria.py自动计算，不接受模型直接填写五维分数。--details-output保存内部评分明细，正式A-D输出不变。权重和阈值未改，选档边界更新须建立新量表测试轨道。
 各子项先选0–4锚点：0缺失/错误，1明显障碍，2部分成立，3清楚满足，4强且明确。子项贡献=权重×锚点/4，各维汇总后四舍五入取整数；总分为五维之和。这保留用户指定不同子项权重，避免“所有子项4分”和5/3分权重冲突。
 D1 商品与品牌识别：主体清晰5、显著度5、品牌4、关键特征3、品类/用途识别3。
 D2 核心利益与卖点说服力：卖点出现4、易懂4、利益转译5、具体事实证据4、M/S相关3。
